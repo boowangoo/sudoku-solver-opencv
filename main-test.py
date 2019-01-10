@@ -1,10 +1,15 @@
 import cv2
 import numpy as np
 import math
+import sys
 
 import bufancv as bfcv
 
-img = cv2.imread('sudoku-test2.jpg', cv2.IMREAD_COLOR)
+fNum = sys.argv[1]
+filename = "puzzles/puzzle" + str(fNum) + ".jpg"
+# filename = "puzzle2.jpg"
+
+img = cv2.imread(filename, cv2.IMREAD_COLOR)
 img_resized = cv2.resize(img, (600, 600))
 img_grayscale = cv2.cvtColor(img_resized, cv2.COLOR_BGR2GRAY)
 img_denoised = cv2.fastNlMeansDenoising(img_grayscale, None, 9, 13)
@@ -73,7 +78,7 @@ for hline in hlines:
         intPt = bfcv.rhoThetaIntersection(hline, vline)
         if intPt[1] < 600 and intPt[0] < 600:
             intPts[intPt[1], intPt[0]] = True
-            img_warped[intPt[1], intPt[0], :] = (0, 255, 0)
+            # img_warped[intPt[1], intPt[0], :] = (0, 255, 0)
 
 def medianOfRect(arr2d, pt1, pt2):
     x1, y1 = pt1
@@ -128,14 +133,14 @@ for i in range(600):
         if medPt != None:
             keyPts[0, 1] = medPt
         keyPtsFlg[0, 1] = True
-        cv2.circle(img_warped, medPt, 3, (0, 0, 255))
+        # cv2.circle(img_warped, medPt, 3, (0, 0, 255))
     if not keyPtsFlg[0, 2] and img_warped_cont[i, 397] > 0.0:
         keyPts[0, 2, 1] = i
         medPt = medianOfRect(intPts, keyPts[0, 2] - [20, 5], keyPts[0, 2] + [20, 20])
         if medPt != None:
             keyPts[0, 2] = medPt
         keyPtsFlg[0, 2] = True
-        cv2.circle(img_warped, medPt, 3, (0, 0, 255))
+        # cv2.circle(img_warped, medPt, 3, (0, 0, 255))
 
     if not keyPtsFlg[1, 0] and img_warped_cont[203, i] > 0.0:
         keyPts[1, 0, 0] = i
@@ -188,16 +193,43 @@ keyPts[2, 1] = medianOfRect(intPts, keyPts[2, 1] - [20, 20], keyPts[2, 1] + [20,
 keyPts[2, 2] = bfcv.xyIntersection(keyPts[0, 2], keyPts[3, 2], keyPts[2, 0], keyPts[2, 3])
 keyPts[2, 2] = medianOfRect(intPts, keyPts[2, 2] - [20, 20], keyPts[2, 2] + [20, 20])
 
-print(keyPts)
+# print(keyPts)
 
-for x in range(4):
-    for y in range(4):
-        cv2.circle(img_warped, tuple(keyPts[x, y]), 3, (0, 0, 255))
+# for x in range(4):
+#     for y in range(4):
+#         cv2.circle(img_warped, tuple(keyPts[x, y]), 3, (0, 0, 255))
+
+# ======
+cells = []
+newRect = np.array([[0, 0], [299, 0], [299, 299], [0, 299]], dtype = "float32")
+
+for i in range(3):
+    for j in range(3):
+        oldRect = np.array([keyPts[0+i, 0+j], keyPts[0+i, 1+j], keyPts[1+i, 1+j], keyPts[1+i, 0+j]], dtype = "float32")
+        M = cv2.getPerspectiveTransform(oldRect, newRect)
+        img_thirds = cv2.warpPerspective(img_warped_thresh, M, (300, 300))
+        cells.append(img_thirds[0:99, 0:99])
+        cells.append(img_thirds[100:199, 0:99])
+        cells.append(img_thirds[200:299, 0:99])
+        cells.append(img_thirds[0:99, 100:199])
+        cells.append(img_thirds[100:199, 100:199])
+        cells.append(img_thirds[200:299, 100:199])
+        cells.append(img_thirds[0:99, 200:299])
+        cells.append(img_thirds[100:199, 200:299])
+        cells.append(img_thirds[200:299, 200:299])
 
 
 
+for i in range(81):
+    writeName = "dataset/cell_" + str(i) + "_" + str(fNum) + ".jpg"
+    # print(writeName)
+    cv2.imwrite(writeName, cells[i])
+# cv2.imshow('cell', cells[0])
+
+
+# cv2.imshow('img', cells[1])
 # cv2.imshow('img', img_warped_cont)
-cv2.imshow('img1', img_warped)
+# cv2.imshow('img1', img_warped)
 # cv2.imshow('img2', img_edges)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
